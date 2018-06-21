@@ -4,15 +4,46 @@
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=Edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>area > boundaries | Chart.js sample</title>
+	<title>area custom</title>
 	<link rel="stylesheet" type="text/css" href="../../style.css">
 	<script src="../../../dist/Chart.bundle.js"></script>
+	<script src="https://rawgit.com/chartjs/chartjs-plugin-annotation/master/chartjs-plugin-annotation.js"></script>
 	<script src="../../utils.js"></script>
 	<script src="analyser.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+  <style>
+		canvas{
+			-moz-user-select: none;
+			-webkit-user-select: none;
+			-ms-user-select: none;
+		}
+		.chartjs-tooltip {
+			opacity: 1;
+			position: absolute;
+			background: 'transparent';
+			color: #444;
+			/* border-radius: 3px; */
+			-webkit-transition: all .1s ease;
+			transition: all .1s ease;
+			pointer-events: none;
+			-webkit-transform: translate(-50%, 0);
+			transform: translate(-50%, 0);
+			padding: 4px;
+		}
+
+		.chartjs-tooltip-key {
+			display: inline-block;
+			width: 10px;
+			height: 10px;
+		}
+	</style>
 </head>
 <body>
 	<div class="content">
-		<div class="wrapper col-2"><canvas id="chart-2"></canvas></div>
+		<div class="wrapper col-12">
+      <canvas id="chart-2"></canvas>
+      <div class="chartjs-tooltip" id="tooltip"></div>
+    </div>
 
 		<div class="toolbar">
 			<button onclick="toggleSmooth(this)">Smooth</button>
@@ -32,6 +63,7 @@
 						 x = activePoint.tooltipPosition().x,
 						 topY = this.chart.scales['y-axis-0'].top,
 						 bottomY = this.chart.scales['y-axis-0'].bottom;
+         // activePoint._model.radius = 3;
 
 				 // draw line
 				 ctx.save();
@@ -52,64 +84,143 @@
 			min: -100,
 			max: 100,
 			count: 8,
-			decimals: 2,
+			decimals: 1,
 			continuity: 1
 		};
 
 		function generateData(config) {
-			return utils.numbers(Chart.helpers.merge(inputs, config || {}));
+      return [
+        {x: 1, y: 10, lat: 45.42502741386579, lng: 141.7697084695101},
+        {x: 2, y: 40, lat: 43.29320031385285, lng: 143.30566406250003},
+        {x: 3, y: 35, lat: 42.8115217450979, lng: 140.55908203125003},
+        {x: 4, y: 100, lat: 40.80828791787897, lng: 140.71622997522357},
+        {x: 5, y: 70, lat: 40.45218860028766, lng: 141.5369295876893},
+        {x: 6, y: -10, lat: 39.68466685418923, lng: 141.13371044397354},
+        {x: 7, y: 30, lat: 38.30145600772161, lng: 140.84806591272357},
+        {x: 8, y: 35, lat: 38.28421068319314, lng: 140.32072216272357},
+
+      ]
+			// return utils.numbers(Chart.helpers.merge(inputs, config || {}));
 		}
 
 		function generateLabels(config) {
-			return utils.months(Chart.helpers.merge({
-				count: inputs.count,
-				section: 3
-			}, config || {}));
+      var arr = [];
+      for (var i = 1; i <= 8; i++) {
+        arr.push(i);
+      }
+      return arr;
+			// return utils.months(Chart.helpers.merge({
+			// 	count: inputs.count,
+			// 	section: 3
+			// }, config || {}));
 		}
 
 		var options = {
+      responsive: true,
+      scales: {
+        yAxes: [{
+          ticks: {
+            callback: (tick, index, ticks) => {
+              return Math.max.apply(Math, ticks) === tick || Math.min.apply(Math, ticks) === tick ? tick + 'm' : null
+            },
+            // min: -100,
+            // max: 100
+          },
+          gridLines: {
+            display: false
+          }
+        }],
+        xAxes: [{
+          ticks: {
+            callback: (tick, index, ticks) => {
+              return Math.max.apply(Math, ticks) === tick ? tick : null
+            }
+          },
+          gridLines: {
+            display: false
+          }
+        }]
+      },
 			tooltips: {
+        mode: 'x',
         intersect: false,
+        enabled: false,
 				custom: function(tooltip) {
           // tooltip will be false if tooltip is not visible or should be hidden
           if (!tooltip) {
             return;
           }
-          tooltip.title = [];
-          tooltip.displayColors = false;
-          tooltip.backgroundColor = 'transparent';
-          tooltip.labelTextColors = '#444';
-					if (tooltip.body) {
-						tooltip.body[0].lines = [`${tooltip.dataPoints[0].yLabel}m`]
-					}
-					console.log('tooltip', tooltip);
+          $(this._chart.canvas).css('cursor', 'pointer');
+          var positionY = this._chart.canvas.offsetTop;
+          var positionX = this._chart.canvas.offsetLeft;
+          $('.chartjs-tooltip').css({
+    				opacity: 0,
+    			});
+
+    			if (!tooltip || !tooltip.opacity) {
+    				return;
+    			}
+          if (tooltip.dataPoints.length > 0) {
+            dataPoint = tooltip.dataPoints[0];
+  					var content = `${dataPoint.yLabel}m`
+  					var $tooltip = $('#tooltip');
+
+  					$tooltip.html(content);
+  					$tooltip.css({
+  						opacity: 1,
+  						top: positionY + dataPoint.y - $tooltip.height() - 10 + 'px',
+  						left: positionX + dataPoint.x + 'px',
+  					});
+    			}
 	      }
+      },
+      legend: {
+        display: false
       },
 			maintainAspectRatio: false,
 			spanGaps: false,
 			elements: {
 				line: {
-					tension: 0.000001
-				}
+					tension: 0.3
+				},
+        point: {
+          backgroundColor: '#444',
+          borderColor: '#444',
+          borderWidth: 1,
+          radius: 1,
+          hitRadius: 3,
+          hoverRadius: 3,
+          events: {
+            click: function (e) {
+              console.log('click', e)
+            }
+          }
+        }
 			},
 			plugins: {
 				filler: {
 					propagate: false
 				}
 			},
-			scales: {
-				xAxes: [{
-					ticks: {
-						autoSkip: false,
-						maxRotation: 0
-					}
-				}]
-			},
-			annotation: {
-				onMousemove: function (e) {
-					console.log('onMousemove', e)
-				}
-			}
+      annotation: {
+        annotations: [
+          /**
+           * A horizontal line at 0m
+           */
+          {
+            type: 'line',
+            mode: 'horizontal',
+            scaleID: 'y-axis-0',
+            value: 0,
+            borderColor: 'rgba(0, 153, 207, .5)',
+            borderWidth: 1,
+            borderDash: [4, 2],
+            label: {
+              enabled: false,
+            }
+          }
+        ]
+      }
 		};
 
 
@@ -117,26 +228,30 @@
 		// reset the random seed to generate the same data for all charts
 		utils.srand(8);
 
-		new Chart('chart-2', {
+    var data = generateData()
+		var chart = new Chart('chart-2', {
 			type: 'LineWithLine',
 			data: {
-				labels: generateLabels(),
+				labels: [],
+				// labels: generateLabels(),
 				datasets: [{
-					backgroundColor: utils.transparentize(presets.red),
-					borderColor: presets.red,
-					data: generateData(),
+					backgroundColor: 'rgba(0, 153, 207, .5)',
+					borderColor: 'rgba(0, 153, 207)',
+					data: [],
+          borderWidth: 2,
 					label: 'Dataset',
 					fill: 'start'
 				}]
 			},
 			plugins: ['chartjs-plugin-annotation'],
-			options: Chart.helpers.merge(options, {
-				title: {
-					text: 'fill: start',
-					display: true
-				}
-			})
+			options: options
 		});
+
+    $("#chart-2").on('click', function(e) {
+      var activePoints = chart.getElementAtEvent(e);
+      var point = activePoints[0];
+      console.log(point);
+    });
 
 
 		// eslint-disable-next-line no-unused-vars
@@ -162,5 +277,27 @@
 			});
 		}
 	</script>
+  <script type="text/javascript">
+  var latlngs = [
+    {lat: 45.42502741386579, lng: 141.7697084695101},
+    {lat: 43.29320031385285, lng: 143.30566406250003},
+  ]
+  $.ajax({
+    url: "http://localhost:3000/ajax/elevation",
+    crossDomain: true,
+    dataType: 'json',
+    data: {
+      latlngs: JSON.stringify(latlngs)
+    },
+    success: function(response) {
+      chart.data.datasets[0].data = response.data;
+      chart.data.labels = response.data.map(i => i.x);
+      chart.update()
+    },
+    error: function(e) {
+      alert(e.statusText);
+    }
+  });
+  </script>
 </body>
 </html>
